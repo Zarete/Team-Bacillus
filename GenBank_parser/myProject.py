@@ -84,6 +84,7 @@ def getGenes(txt):
         lst_genes.append(tmp)
 
     lst_genes.append(section[-1:])
+    print(len(lst_genes))
 
     for elem in lst_genes:
         dic_result = {'start' : 0,'stop' : 0, 'frame' : 0, 'length' : 0, 'name' : 'unknown', 'protein' : 'xxx', 'product' : 'unknown'}
