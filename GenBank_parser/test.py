@@ -13,4 +13,4 @@ import myProject as proj
 entry = proj.readFlatFile('sequence.gb')
 features = proj.getFeatures(entry)
 genes = proj.getGenes(features)
-#print(len(genes)) # Number of genes described in the features section
+print(len(genes)) # Number of genes described in the features section
