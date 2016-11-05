@@ -78,11 +78,12 @@ def getGenes(txt):
     for i in range(len(section)):
         if '     gene     ' in section[i]:
             lst_pos.append(i)
-    print(len(lst_pos))
-    for i in range(0, len(lst_pos)-1, 2):
+
+    for i in range(0,len(lst_pos)-1,1):
         tmp = section[lst_pos[i]:lst_pos[i+1]]
         lst_genes.append(tmp)
-    print(len(lst_genes))
+
+    lst_genes.append(section[-1:])
 
     for elem in lst_genes:
         dic_result = {'start' : 0,'stop' : 0, 'frame' : 0, 'length' : 0, 'name' : 'unknown', 'protein' : 'xxx', 'product' : 'unknown'}
@@ -103,5 +104,5 @@ def getGenes(txt):
                 dic_result['frame'] = part[1]
 
         result.append(dic_result)
-    print(result)
     print(len(result))
+    print(result)
