@@ -40,7 +40,7 @@ def readGenBank(filename):
         sequence in the file
     """
 
-    result = {"description" : '', "type" : '', "data" : '', "gbtype" : '',
+    result = {"description" : '', "type" : '', "data" : 'xxx', "gbtype" : '',
               "ID" : '', 'length' : '', 'type' : '', 'organism' : '', "codeTableID" : '',
               "genes" : []}
 
@@ -48,32 +48,45 @@ def readGenBank(filename):
         data = file_content.read()
 
     features = data[data.index('FEATURES'): data.index('ORIGIN')]
-    header = data[data.index('LOCUS'): data.index('FEATURES')]
+    header = data[data.index('LOCUS'): data.index('     gene     ')]
 
-    # header parsing and extraction
+    ########## Header parsing and extraction ##########
+
     splitted_header = header.split('\n')
+
+    if '##Genome-Annotation-Data-START##' in header and '##Genome-Annotation-Data-END##' in header:
+        result['data'] = header[header.index('##Genome-Annotation-Data-START##')+33: header.index('##Genome-Annotation-Data-END##')]
 
     for elem in splitted_header:
         if 'DEFINITION' in elem:
             tmp = elem.strip().split('DEFINITION')
             result['description'] = tmp[1].strip()
-        elif 'LOCUS' in elem:
-            tmp = elem.strip().split()
+        elif '/mol_type' in elem:
+            moltype = elem.split('"')[1].strip()
+            result['gbtype'] = moltype
 
-    # features parsing and extraction
+            if 'RNA' in moltype.upper():
+                otype = 'rna'
+            elif 'DNA' in moltype.upper():
+                otype = 'dna'
+            elif 'PROTEIN' in moltype.upper():
+                otype = 'protein'
+            else:
+                otype = ''
+            result['type'] = otype
+        elif 'ACCESSION' in elem:
+            ID = elem.split("ACCESSION")[1].strip()
+            result['ID'] = ID 
+        elif '/organism' in elem:
+            organism = elem.split('"')[1].strip()
+            result['organism'] = organism
+        elif '     source     ' in elem:
+            size = elem.split('..')[1].strip()
+            result['length'] = size
+
+    ########## Features parsing and extraction ##########
+
     splitted_features = features.split('     gene     ')
-
-    lst_pos = []
-    lst_genes = []
-
-    """for i in range(len(splitted_features)):
-        if '     gene     ' in splitted_features[i]:
-            lst_pos.append(i)
-
-    for i in range(0,len(lst_pos)-1,1):
-        tmp = splitted_features[lst_pos[i]:lst_pos[i+1]]
-        lst_genes.append(tmp)
-    lst_genes.append(splitted_features[-1:])"""
 
     for elem in splitted_features[1:]:
 
@@ -106,7 +119,7 @@ def readGenBank(filename):
 
         result['genes'].append(dic_result)
 
-    for elem in result['genes']:
+    """for elem in result['genes']:
         print("start    ",elem['start'])
         print("stop     ",elem['stop'])
         print("length   ",elem['length'])
@@ -115,5 +128,5 @@ def readGenBank(filename):
         print("product  ",elem['product'])
         print("protein  ",elem['protein'])
         print('\n\n')
-
+"""
     return result
