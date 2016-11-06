@@ -10,11 +10,11 @@ import myProject as proj
 #features = proj.getFeatures(entry)
 #print(features) # '      source          1..626 '...
 
-#entry = proj.readFlatFile('sequence.gb')
-#features = proj.getFeatures(entry)
-#genes = proj.getGenes(features)
-#print(len(genes)) # Number of genes described in the features section
-
+"""entry = proj.readFlatFile('test.gb')
+features = proj.getFeatures(entry)
+genes = proj.getGenes(features)
+ # Number of genes described in the features section
+"""
 seq = proj.readGenBank('sequence.gb')
 print(seq['ID'])
 print(seq['length'])
@@ -22,6 +22,7 @@ print(seq['type'])
 print(seq['organism'])
 print(seq['description'])
 print()
+
 print(len(seq['genes']) ) # Number of genes
 print(seq['genes'][0]['start'])
 print(seq['genes'][0]['stop'])

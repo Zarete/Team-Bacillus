@@ -22,108 +22,10 @@ def clean_size(txt):
 
     else:
         nb = ''
-        for char in txt:
+        for char in txt.split('\n')[-1]:
             if char.isdigit():
                 nb += char
         return nb
-
-def readFlatFile(filename):
-    """ Flat file reader (format GenBank)
-
-    Loads the datas from the file into memory,
-    this function is written by Maucourt Thomas
-
-    Args :
-        filename : file to extract information from
-
-    Return :
-        return the datas extracted as a string
-    """
-
-    with open(filename, 'r') as file_content:
-        result = file_content.read()
-    return str(result)
-
-def getFeatures(txt, specific = "auto"):
-    """Features extraction
-
-    Extract the features of the text given in
-    parameter,
-    this function is written by Maucourt Thomas
-
-    Args :
-        txt : string containing the sequence and it's informations
-
-    Return :
-        return a string containg the features of the sequence
-    """
-
-    pos1 = txt.index("FEATURES")
-    pos2 = txt.index('ORIGIN')
-
-    result = txt[pos1:pos2]
-
-    return result
-
-def getGenes(txt):
-    """Extract informations about genes & CDS
-
-    Extract all the informations about genes & CDS
-    of the parameter txt,
-    this function is written by Maucourt Thomas
-
-    Args :
-        txt : string containing the sequence and it's informations
-
-    Return :
-        return a list of dictionnaries containing all the informations
-        about gene & CDS splitted_datas
-    """
-
-    result = []
-
-    splitted_data = txt.split('\n')
-    lst_pos = []
-    lst_genes = []
-
-
-    for i in range(len(splitted_data)):
-        if '     gene     ' in splitted_data[i]:
-            lst_pos.append(i)
-
-    for i in range(0,len(lst_pos)-1,1):
-        tmp = splitted_data[lst_pos[i]:lst_pos[i+1]]
-        lst_genes.append(tmp)
-
-    lst_genes.append(splitted_data[-1:])
-
-    for elem in lst_genes:
-        dic_result = {'start' : 0,'stop' : 0, 'frame' : 0, 'length' : 0, 'name' : 'unknown', 'protein' : 'xxx', 'product' : 'unknown'}
-        for part in elem:
-            if '     gene     ' in part or '     tRNA     ' in part or '     rRNA     ' in part:
-                part = part.strip().split('..')
-                part[0] = clean_size(part[0])
-                part[1] = clean_size(part[1])
-                dic_result['start'] = int(part[0])
-                dic_result['stop'] = int(part[1])
-                dic_result['length'] = int(part[1]) - int(part[0])
-
-            elif 'product' in part:
-                part = part.split('=')
-                dic_result['product'] = part[1][1:-1]
-
-            elif 'codon_start' in part:
-                dic_result['frame'] = part.split('=')[1]
-
-            elif 'sequence' in part:
-                dic_result['protein'] = part.split(':')[2]
-
-            elif '/gene' in part:
-                dic_result['name'] = part.split('=')[1][1:-1]
-
-        result.append(dic_result)
-
-    return result
 
 def readGenBank(filename):
     """GenBank flat file parser
@@ -159,44 +61,59 @@ def readGenBank(filename):
             tmp = elem.strip().split()
 
     # features parsing and extraction
-    splitted_data = data.split('\n')
+    splitted_features = features.split('     gene     ')
 
     lst_pos = []
     lst_genes = []
 
-    for i in range(len(splitted_data)):
-        if '     gene     ' in splitted_data[i]:
+    """for i in range(len(splitted_features)):
+        if '     gene     ' in splitted_features[i]:
             lst_pos.append(i)
 
     for i in range(0,len(lst_pos)-1,1):
-        tmp = splitted_data[lst_pos[i]:lst_pos[i+1]]
+        tmp = splitted_features[lst_pos[i]:lst_pos[i+1]]
         lst_genes.append(tmp)
-    lst_genes.append(splitted_data[-1:])
+    lst_genes.append(splitted_features[-1:])"""
 
-    for elem in lst_genes:
+    for elem in splitted_features[1:]:
+
         dic_result = {'start' : 0,'stop' : 0, 'frame' : 0, 'length' : 0, 'name' : 'unknown', 'protein' : 'xxx', 'product' : 'unknown'}
-        for part in elem:
-            if '     gene     ' in part or '     tRNA     ' in part or '     rRNA     ' in part:
-                part = part.strip().split('..')
-                part[0] = clean_size(part[0])
-                part[1] = clean_size(part[1])
-                dic_result['start'] = int(part[0])
-                dic_result['stop'] = int(part[1])
-                dic_result['length'] = int(part[1]) - int(part[0])
 
-            elif 'product' in part:
-                part = part.split('=')
-                dic_result['product'] = part[1][1:-1]
+        if "product=" in elem:
+            product = elem.split("/product=")[1].replace(" "*20, "").replace('\n', '').split('"')[1]
+            dic_result['product'] = product
 
-            elif 'codon_start' in part:
-                dic_result['frame'] = part.split('=')[1]
+        section = elem.split('/')
 
-            elif 'sequence' in part:
-                dic_result['protein'] = part.split(':')[2]
+        for part in section:
 
-            elif '/gene' in part:
-                dic_result['name'] = part.split('=')[1][1:-1]
+            if '..' in part:
+                start = clean_size(part.strip().split('..')[0])
+                stop = clean_size(part.strip().split('..')[1])
+                dic_result['start'] = int(start)
+                dic_result['stop'] = int(stop)
+                dic_result['length'] = int(stop) - int(start)
+
+            elif 'codon_start=' in part:
+                dic_result['frame'] = part.strip().replace('\n', '').split('=')[1].strip()
+
+            elif 'gene=' in part:
+                name = part.split("=")
+                dic_result['name'] = name[1].replace('\n', '').strip()[1:-1]
+            elif 'translation=' in part:
+                protein = part.strip().replace("\n", "").split('\"')[1]
+                dic_result['protein'] = protein.replace(' ', '')
 
         result['genes'].append(dic_result)
+
+    for elem in result['genes']:
+        print("start    ",elem['start'])
+        print("stop     ",elem['stop'])
+        print("length   ",elem['length'])
+        print("frame    ",elem['frame'])
+        print("name     ",elem['name'])
+        print("product  ",elem['product'])
+        print("protein  ",elem['protein'])
+        print('\n\n')
 
     return result
