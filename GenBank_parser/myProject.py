@@ -5,6 +5,18 @@
 import myBio as bio
 
 def clean_size(txt):
+    """ Gene size cleaner
+
+    Cleans the size information provided to the function,
+    this function is written by Maucourt Thomas
+
+    Args :
+        txt : text extracted from the line containing the gene size
+
+    Return :
+        return a string containing numbers only
+    """
+
     if txt.isdigit():
         return txt
 
@@ -65,25 +77,25 @@ def getGenes(txt):
 
     Return :
         return a list of dictionnaries containing all the informations
-        about gene & CDS sections
+        about gene & CDS splitted_datas
     """
 
     result = []
 
-    section = txt.split('\n')
+    splitted_data = txt.split('\n')
     lst_pos = []
     lst_genes = []
 
 
-    for i in range(len(section)):
-        if '     gene     ' in section[i]:
+    for i in range(len(splitted_data)):
+        if '     gene     ' in splitted_data[i]:
             lst_pos.append(i)
 
     for i in range(0,len(lst_pos)-1,1):
-        tmp = section[lst_pos[i]:lst_pos[i+1]]
+        tmp = splitted_data[lst_pos[i]:lst_pos[i+1]]
         lst_genes.append(tmp)
 
-    lst_genes.append(section[-1:])
+    lst_genes.append(splitted_data[-1:])
 
     for elem in lst_genes:
         dic_result = {'start' : 0,'stop' : 0, 'frame' : 0, 'length' : 0, 'name' : 'unknown', 'protein' : 'xxx', 'product' : 'unknown'}
@@ -111,7 +123,80 @@ def getGenes(txt):
 
         result.append(dic_result)
 
-    for elem in result:
-        print(elem)
+    return result
+
+def readGenBank(filename):
+    """GenBank flat file parser
+
+    Extract all the informations about a GenBank flat file,
+    this function is written by Maucourt Thomas
+
+    Args :
+        filename : GenBank flat file
+    Return :
+        return a dictionnary containing all the informations about the
+        sequence in the file
+    """
+
+    result = {"description" : '', "type" : '', "data" : '', "gbtype" : '',
+              "ID" : '', 'length' : '', 'type' : '', 'organism' : '', "codeTableID" : '',
+              "genes" : []}
+
+    with open(filename, 'r') as file_content:
+        data = file_content.read()
+
+    features = data[data.index('FEATURES'): data.index('ORIGIN')]
+    header = data[data.index('LOCUS'): data.index('FEATURES')]
+
+    # header parsing and extraction
+    splitted_header = header.split('\n')
+
+    for elem in splitted_header:
+        if 'DEFINITION' in elem:
+            tmp = elem.strip().split('DEFINITION')
+            result['description'] = tmp[1].strip()
+        elif 'LOCUS' in elem:
+            tmp = elem.strip().split()
+
+    # features parsing and extraction
+    splitted_data = data.split('\n')
+
+    lst_pos = []
+    lst_genes = []
+
+    for i in range(len(splitted_data)):
+        if '     gene     ' in splitted_data[i]:
+            lst_pos.append(i)
+
+    for i in range(0,len(lst_pos)-1,1):
+        tmp = splitted_data[lst_pos[i]:lst_pos[i+1]]
+        lst_genes.append(tmp)
+    lst_genes.append(splitted_data[-1:])
+
+    for elem in lst_genes:
+        dic_result = {'start' : 0,'stop' : 0, 'frame' : 0, 'length' : 0, 'name' : 'unknown', 'protein' : 'xxx', 'product' : 'unknown'}
+        for part in elem:
+            if '     gene     ' in part or '     tRNA     ' in part or '     rRNA     ' in part:
+                part = part.strip().split('..')
+                part[0] = clean_size(part[0])
+                part[1] = clean_size(part[1])
+                dic_result['start'] = int(part[0])
+                dic_result['stop'] = int(part[1])
+                dic_result['length'] = int(part[1]) - int(part[0])
+
+            elif 'product' in part:
+                part = part.split('=')
+                dic_result['product'] = part[1][1:-1]
+
+            elif 'codon_start' in part:
+                dic_result['frame'] = part.split('=')[1]
+
+            elif 'sequence' in part:
+                dic_result['protein'] = part.split(':')[2]
+
+            elif '/gene' in part:
+                dic_result['name'] = part.split('=')[1][1:-1]
+
+        result['genes'].append(dic_result)
 
     return result
