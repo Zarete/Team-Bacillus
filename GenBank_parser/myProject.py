@@ -4,15 +4,13 @@
 
 import myBio as bio
 
+
 def clean_size(txt):
     """ Gene size cleaner
-
     Cleans the size information provided to the function,
     this function is written by Maucourt Thomas
-
     Args :
         txt : text extracted from the line containing the gene size
-
     Return :
         return a string containing numbers only
     """
@@ -76,7 +74,7 @@ def readGenBank(filename):
             result['type'] = otype
         elif 'ACCESSION' in elem:
             ID = elem.split("ACCESSION")[1].strip()
-            result['ID'] = ID 
+            result['ID'] = ID
         elif '/organism' in elem:
             organism = elem.split('"')[1].strip()
             result['organism'] = organism
@@ -96,18 +94,19 @@ def readGenBank(filename):
             product = elem.split("/product=")[1].replace(" "*20, "").replace('\n', '').split('"')[1]
             dic_result['product'] = product
 
+        sub_section = elem.split('\n')[0]
+        if '..' in sub_section and '/' not in sub_section:
+            start = clean_size(sub_section.strip().split('..')[0])
+            stop = clean_size(sub_section.strip().split('..')[1])
+            dic_result['start'] = int(start)
+            dic_result['stop'] = int(stop)
+            dic_result['length'] = int(stop) - int(start)
+
         section = elem.split('/')
 
         for part in section:
 
-            if '..' in part:
-                start = clean_size(part.strip().split('..')[0])
-                stop = clean_size(part.strip().split('..')[1])
-                dic_result['start'] = int(start)
-                dic_result['stop'] = int(stop)
-                dic_result['length'] = int(stop) - int(start)
-
-            elif 'codon_start=' in part:
+            if 'codon_start=' in part:
                 dic_result['frame'] = part.strip().replace('\n', '').split('=')[1].strip()
 
             elif 'gene=' in part:
@@ -119,14 +118,41 @@ def readGenBank(filename):
 
         result['genes'].append(dic_result)
 
-    """for elem in result['genes']:
-        print("start    ",elem['start'])
-        print("stop     ",elem['stop'])
-        print("length   ",elem['length'])
-        print("frame    ",elem['frame'])
-        print("name     ",elem['name'])
-        print("product  ",elem['product'])
-        print("protein  ",elem['protein'])
-        print('\n\n')
-"""
     return result
+
+    """if '..' in part.split('\n')[0]:
+        start, stop, sub = 0, 0, []
+        if 'join(' in part or 'complement(' in part:
+            sub = part.replace('\n', '').split('join(')[1].split(',')
+            under = []
+            for elem in sub:
+                print(elem)
+                a, b, tmp = 0, 0, []
+                tmp = elem.split('..')
+                a = clean_size(tmp[0])
+                b = clean_size(tmp[1])
+                under.append(a)
+                under.append(b)
+            under = sorted(under)
+            start = under[3]
+            stop = under[1]
+            dic_result['start'] = start
+            dic_result['stop'] = stop
+            dic_result['length'] = (under[3] - under[2]) + (under[1] - under[0])
+
+        else:
+            start = part[0]
+            print('f',start)
+            start = clean_size(start)
+            print('s',start)
+            #print(clean_size(start[0]))
+            stop = part[1]
+            print('f',stop)
+            stop = clean_size(stop)
+            print('s',stop)
+            #print(clean_size(stop[1]))
+            #start = clean_size(part.replace("\n", "").strip().split('\n')[0].split('..')[1])
+            #stop = clean_size(part.replace("\n", "").strip().split('\n')[0].split('..')[1])
+            dic_result['start'] = start
+            dic_result['stop'] = stop
+            dic_result['length'] = stop - start"""
