@@ -96,11 +96,25 @@ def readGenBank(filename):
 
         sub_section = elem.split('\n')[0]
         if '..' in sub_section and '/' not in sub_section:
-            start = clean_size(sub_section.strip().split('..')[0])
-            stop = clean_size(sub_section.strip().split('..')[1])
-            dic_result['start'] = int(start)
-            dic_result['stop'] = int(stop)
-            dic_result['length'] = int(stop) - int(start)
+            if ',' in sub_section:
+                sub, final = [], []
+                under = sub_section.split(',')
+                for elem in under:
+                    sub.extend(elem.split('..'))
+
+                for elem in sub:
+                    final.append(clean_size(elem))
+
+                dic_result['start'] = int(final[1])
+                dic_result['stop'] = int(final[3])
+                dic_result['length'] = (int(final[1]) - int(final[0])) + (int(final[3]) - int(final[2]))
+
+            else:
+                start = clean_size(sub_section.strip().split('..')[0])
+                stop = clean_size(sub_section.strip().split('..')[1])
+                dic_result['start'] = int(start)
+                dic_result['stop'] = int(stop)
+                dic_result['length'] = int(stop) - int(start)
 
         section = elem.split('/')
 
