@@ -6,6 +6,7 @@ import myBio as bio
 
 def clean_numbers(txt):
     """ Gene size cleaner
+    
     Cleans the size information provided to the function,
     this function is written by Maucourt Thomas
     Args :
@@ -65,13 +66,13 @@ def readGenBank(filename):
         elif '/mol_type' in elem:
             result['gbtype'] = elem.split('"')[1].strip()
 
-            if 'RNA' in moltype.upper():
+            if 'RNA' in result['gbtype']:
                 otype = 'rna'
 
-            elif 'DNA' in moltype.upper():
+            elif 'DNA' in result['gbtype']:
                 otype = 'dna'
 
-            elif 'PROTEIN' in moltype.upper():
+            elif 'PROTEIN' in result['gbtype']:
                 otype = 'protein'
 
             else:
@@ -102,6 +103,7 @@ def readGenBank(filename):
         if "product=" in elem:
             dic_result['product'] = elem.split("/product=")[1].replace(" "*20, "").replace('\n', '').split('"')[1]
 
+        # Extract start, stop and length of the gene
         sub_section = elem.split('\n')[0]
         if '..' in sub_section:
             start, stop, length = 0, 0, 0
@@ -129,6 +131,7 @@ def readGenBank(filename):
             dic_result['stop'] = stop
             dic_result['length'] = length
 
+        # Extract frame, gene name and translated protein
         section = elem.split('/')
         for part in section:
             if 'codon_start=' in part:
@@ -137,7 +140,7 @@ def readGenBank(filename):
             elif 'gene=' in part:
                 name = part.split("=")
                 dic_result['name'] = name[1].replace('\n', '').strip()[1:-1]
-                
+
             elif 'translation=' in part:
                 dic_result['protein'] = part.strip().replace("\n", "").split('\"')[1].replace(' ', '')
 
