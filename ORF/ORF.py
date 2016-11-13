@@ -66,44 +66,66 @@ def findORF(seq, threshold,codeTable):
         The function findORF returns a list of dictionnaries. Each dictionnary represents an ORF with 
         information stocked in different keys : start, stop, length, frame, protein
     """
-    
-    POS_D,POS_F,a=[],[],0
+    POS_F_1=[0,0,0]
+    POS_F_2=[0,0,0]
+    POS_D,POS_F,a=[[],[],[]],[[],[],[]],0
+    #Boucle pour les 3 frames
     for C in range(3):
-        for i in range(C,len(seq['data'])-(len(seq['data'])-C)%3,3):
+        #Trouve le premier STOP
+        K=C
+        while seq['data'][K:K+3]!='TAA' and seq['data'][K:K+3]!='TAG' and seq['data'][K:K+3]!='TGA':
+            POS_F_1[C]=K
+            K += 3
+        #-(len(seq['data']-C)%3 c'est pour pas etre out of range, K c'est pour commencer apres le premier STOP
+        for i in range(K,len(seq['data'])-(len(seq['data'])-C)%3,3):
+            #le a c'est un compteur pour avoir autant de start et stop
             if seq['data'][i:i+3]=='ATG' and a==0:
-                POS_D.append(i)
+                POS_D[C].append(i)
                 a=1
             if (seq['data'][i:i+3]=='TAA' or seq['data'][i:i+3]=='TAG' or seq['data'][i:i+3]=='TGA') and a==1:
-                POS_F.append(i)
+                POS_F[C].append(i)
                 a=0
-        if a==1:
-            POS_D.pop()
-            a=0
-    rev_seq=bio.complement_reverse(seq)
     for C in range(3):
-        for i in range(C,len(rev_seq['data'])-(len(seq['data'])-C)%3,3):
+        #S'il y a plus de start que de stop c'est que l'ORF finit sur le début de la séquence (ADN circulaire), on rajoute le stop de départ.
+        if len(POS_D[C]) > len(POS_F[C]):
+            POS_F[C].append(POS_F_1[C])
+    rev_seq=bio.complement_reverse(seq)
+    #meme chose pour les 3 autres frames
+    for C in range(3):
+        K=C
+        while seq['data'][K:K+3]!='TAA' and seq['data'][K:K+3]!='TAG' and seq['data'][K:K+3]!='TGA':
+            POS_F_2[C]=K
+            K += 3
+        for i in range(K,len(rev_seq['data'])-(len(seq['data'])-C)%3,3):
             if rev_seq['data'][i:i+3]=='ATG' and a==0:
-                POS_D.append(-(len(rev_seq['data'])-i))
+                #positions notés en négatif
+                POS_D[C].append(-(len(rev_seq['data'])-i))
                 a=1
             if (rev_seq['data'][i:i+3]=='TAA' or rev_seq['data'][i:i+3]=='TAG' or rev_seq['data'][i:i+3]=='TGA') and a==1:
-                POS_F.append(-(len(rev_seq['data'])-i))
+                POS_F[C].append(-(len(rev_seq['data'])-i))
                 a=0
-        if a==1:
-            POS_D.pop()
-            a=0
+    for C in range(3):
+        if len(POS_D[C]) > len(POS_F[C]):
+            POS_F[C].append(POS_F_2[C])
+                
+    #application du seuil, seul les orf assez long iront dans les nouvelles listes.
+    LD,LF= POS_D[0]+POS_D[1]+POS_D[2], POS_F[0]+POS_F[1]+POS_F[2]
     newD,newF=[],[]
-    for i in range(len(POS_D)-1):
-        if POS_F[i]-POS_D[i] > threshold:
-            newD.append(POS_D[i])
-            newF.append(POS_F[i])
+    for i in range(len(LD)):
+        if LF[i]-LD[i] > threshold:
+            newD.append(LD[i])
+            newF.append(LF[i])
     listORFs=[]
     for i in range(len(newD)):
+        #remplissage du dico, start, stop, frame, longueur, proteine traduite
         listORFs.append({'start':abs(newD[i])+1,'stop':abs(newF[i]),'frame':'','length':newF[i]-newD[i],'protein':''})
+        #boucle pour completer ['frame']
         for C in range(3):
             if newF[i]%3==C and newF[i]>=0:
                 listORFs[i]['frame']=C+1
             if newF[i]%3==C and newF[i]<0:
                 listORFs[i]['frame']=-C-1
+        #Completion de la proteine
         orf=seq['data'][newD[i]:newF[i]]
         listORFs[i]['protein']=translate(orf,codeTable)
     return listORFs
@@ -170,3 +192,8 @@ def getTopLongestORF(orflist,value):
     return toplist
 
 #sequence=bio.readFASTA('./seq.txt')
+
+#a=findORF(sequence,180,4)
+#b=getLengths(a)
+#c=getLongestORF(a)
+#d=getTopLongestORF(a,0.1)
