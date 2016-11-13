@@ -43,7 +43,6 @@ def shuffle(seq):
         The function returns the initial dictionary, with the permuted sequence instead of the original.
         The "description" is also updated by adding "shuffle" at the end of it
     """
-    
 
     # Transforms the string data into a list:
     listseq = list(seq["data"])
@@ -58,7 +57,7 @@ def shuffle(seq):
     #The dictionary is modified to replace the data and add the shuffle keyword
         
     seq["description"] += " | shuffle"
-    seq["data"] = listseq
+    seq["data"] = str(listseq)
         
     return seq
 
