@@ -5,7 +5,7 @@ import myProject as proj
 
 import os
 
-seq = proj.readGenBank('sequences/sequencelol.gb')
+#seq = proj.readGenBank('sequences/sequencelol.gb')
 
 """
 for a in seq['genes']:
@@ -29,27 +29,40 @@ features = proj.getFeatures(entry)
 genes = proj.getGenes(features)
  # Number of genes described in the features section
 """
+datas = []
 for elem in lst_fichier:
-    print("\n#####", elem, "#####\n")
-    seq = proj.readGenBank('sequences/'+elem)
-    print(seq['ID'])
-    print(seq['length'])
-    print(seq['type'])
-    print(seq['organism'])
-    print(seq['description'])
-    print(seq['gbtype'])
-    print(seq['data'])
+    datas.append(proj.readGenBank('sequences/'+elem))
+
+"""print(datas[0]['genes']["name"])"""
+
+for elem in datas:
+    print(elem['genes'])
+
+
+    print("\n[+++++]", elem, "[+++++]\n")
+    
+    print('ID :',seq['ID'])
+    print('#GENES :',seq['length'])
+    print('TYPE :',seq['type'])
+    print('ORGANISM :',seq['organism'])
+    print('DESCRIPTION :',seq['description'])
+    print('GBTYPE :',seq['gbtype'])
+    print('DATA :',seq['data'])
+    print('\n####################\n')
 
     for a in seq['genes']:
+        print('NAME :', a['name'])
         print('START :', a['start'])
         print('STOP :', a['stop'])
         print('LENGTH :', a['length'])
+        print('FRAME :', a['frame'])
+        print('PRODUCT :', a['product'])
+        print('PROTEIN :', a['protein'])
         print()
 
     print("\n##############################################\n")
 
 print("\n\n\n ALL WENT GOOD !! \n\n")
-
 """
 seq = proj.readGenBank('sequences/sequence.gb')
 print(seq['ID'])
