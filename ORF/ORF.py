@@ -20,18 +20,28 @@ def getGeneticCode(NCBI_ID):
     """
     
     if NCBI_ID==1:
-        bases = ['T', 'C', 'A', 'G']
-        codons = [a+b+c for a in bases for b in bases for c in bases]
-        amino_acids_one = 'FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG'
-        codon_table = dict(zip(codons, amino_acids_one))
-        return codon_table
+        base1='TTTTTTTTTTTTTTTTCCCCCCCCCCCCCCCCAAAAAAAAAAAAAAAAGGGGGGGGGGGGGGGG'
+        base2='TTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGG'
+        base3='TCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAG'
+        aas  ='FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG'
+        table = {}
+        for i in range(0,len(aas)):
+            codon = base1[i]+base2[i]+base3[i]
+            aa = aas[i]
+            table[codon] = aa
+        return table
     
     if NCBI_ID==4:
-        bases = ['T', 'C', 'A', 'G']
-        codons = [a+b+c for a in bases for b in bases for c in bases]
-        amino_acids_one = 'FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG'
-        codon_table = dict(zip(codons, amino_acids_one))
-        return codon_table
+        base1='TTTTTTTTTTTTTTTTCCCCCCCCCCCCCCCCAAAAAAAAAAAAAAAAGGGGGGGGGGGGGGGG'
+        base2='TTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGGTTTTCCCCAAAAGGGG'
+        base3='TCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAG'
+        aas  ='FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG'
+        table = {}
+        for i in range(0,len(aas)):
+            codon = base1[i]+base2[i]+base3[i]
+            aa = aas[i]
+            table[codon] = aa
+        return table
 
 def translate(seq,codonTable=1):
     codonT=getGeneticCode(codonTable)
@@ -67,7 +77,15 @@ def findORF(seq, threshold,codeTable):
         The function findORF returns a list of dictionnaries. Each dictionnary represents an ORF with 
         information stocked in different keys : start, stop, length, frame, protein
     """
-    
+    codons=getGeneticCode(codeTable)
+    codonstop=[]
+    codonstart=[]
+    for i in codons:
+        if codons.get(i) == "*":
+            codonstop.append(i)
+        if codons.get(i) =="M":
+            codonstart.append(i)
+
     #Data doublée afin de trouver les séquences débordantes de l'ADN circulaire
     seq['data']+=seq['data']
     revseq=copy.deepcopy(seq)
@@ -85,29 +103,29 @@ def findORF(seq, threshold,codeTable):
     #Boucle pour les stops.
     for k in range(3): #Chaque frame
         for i in range(k,len(seq['data']),3): #Tous les 3 pas
-            if seq['data'][i:i+3]=='TAA' or seq['data'][i:i+3]=='TAG' or seq['data'][i:i+3]=='TGA':
+            if seq['data'][i:i+3] in codonstop:
                 PosF[k].append(i)
         for i in range(k,len(revseq['data']),3): #boucle revseq
-            if revseq['data'][i:i+3]=='TAA' or revseq['data'][i:i+3]=='TAG' or revseq['data'][i:i+3]=='TGA':
+            if revseq['data'][i:i+3] in codonstop:
                 PosFi[k].append(i)
+
     #Boucle pour les 2 autres listes.
     for j in range(3):
         for k in range(0,len(PosF[j])-1): #Avance d'un stop
             a=0 #Le compteur 'a' permet d'arreter le stockage des starts entre 2 stops apres le premier start trouvé
             for i in range(PosF[j][k],PosF[j][k+1],3): #Entre deux stops
-                if seq['data'][i:i+3]=='ATG' and a==0:
+                if seq['data'][i:i+3] in codonstart and a==0:
                     PosD[j].append(i)
                     PosF2[j].append(PosF[j][k+1])
                     a=1
         for k in range(0,len(PosFi[j])-1): #revseq
             a=0
             for i in range(PosFi[j][k],PosFi[j][k+1],3):
-                if revseq['data'][i:i+3]=='ATG' and a==0:
+                if revseq['data'][i:i+3] in codonstart and a==0:
                     PosDi[j].append(i)
                     PosF2i[j].append(PosFi[j][k+1])
                     a=1
-
-        
+                    
     #Nouvelles variables pour stocker uniquement les ORFs dépassant le seuil.
     NewD,NewF=[[],[],[]],[[],[],[]]
     NewDi,NewFi=[[],[],[]],[[],[],[]]
@@ -127,9 +145,9 @@ def findORF(seq, threshold,codeTable):
     for k in range(3):
         for i in range(len(NewD[k])):
             #remplissage du dico, start, stop, frame, longueur, proteine traduite
-            ORFs.append({'start':NewD[k][i]+1,'stop':NewF[k][i],'frame':k+1,'length':NewF[k][i]-NewD[k][i],'protein':translate(seq['data'][NewD[k][i]:NewF[k][i]],1)})
+            ORFs.append({'start':NewD[k][i]+1,'stop':NewF[k][i]+3,'frame':k+1,'length':NewF[k][i]-NewD[k][i]+3,'protein':translate(seq['data'][NewD[k][i]:NewF[k][i]],codeTable)})
         for i in range(len(NewDi[k])):
-            ORFsi.append({'start':len(seq['data'])-NewDi[k][i],'stop':len(seq['data'])-NewFi[k][i]+1,'frame':-k-1,'length':NewFi[k][i]-NewDi[k][i],'protein':translate(revseq['data'][NewDi[k][i]:NewFi[k][i]],1)})
+            ORFsi.append({'start':len(seq['data'])-NewDi[k][i],'stop':len(seq['data'])-NewFi[k][i]+1,'frame':-k-1,'length':NewFi[k][i]-NewDi[k][i],'protein':translate(revseq['data'][NewDi[k][i]:NewFi[k][i]],codeTable)})
 
     #Suppression doublons. Boucles pour comparer les items entre eux
     for i in range(len(ORFs)):
@@ -229,13 +247,14 @@ def getTopLongestORF(orflist,value):
 
 sequence=bio.readFASTA('./seq.txt')
 
-a=findORF(sequence,0,1)
+a=findORF(sequence,0,4)
 b=getLengths(a)
 c=getLongestORF(a)
 d=getTopLongestORF(a,0.1)
 
 for i in a:
     print(i)
+print(len(a))
 print(b)
 print(c)
 print(d)
