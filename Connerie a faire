@@ -1,1 +1,3 @@
 Récupérer la taille moyenne des seq du parser GenBank -> appliquer en threshold a parser ORF
+
+nextorf.py -> biopython pour ORF (a voir)

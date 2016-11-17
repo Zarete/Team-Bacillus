@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #Problem 4.6.1.1
 import myBio as bio
+import copy
 
 #Recupere la table standard ou celle du mycoplasme
 def getGeneticCode(NCBI_ID):
@@ -66,69 +67,103 @@ def findORF(seq, threshold,codeTable):
         The function findORF returns a list of dictionnaries. Each dictionnary represents an ORF with 
         information stocked in different keys : start, stop, length, frame, protein
     """
-    POS_F_1=[0,0,0]
-    POS_F_2=[0,0,0]
-    POS_D,POS_F,a=[[],[],[]],[[],[],[]],0
-    #Boucle pour les 3 frames
-    for C in range(3):
-        #Trouve le premier STOP
-        K=C
-        while seq['data'][K:K+3]!='TAA' and seq['data'][K:K+3]!='TAG' and seq['data'][K:K+3]!='TGA':
-            POS_F_1[C]=K
-            K += 3
-        #-(len(seq['data']-C)%3 c'est pour pas etre out of range, K c'est pour commencer apres le premier STOP
-        for i in range(K,len(seq['data'])-(len(seq['data'])-C)%3,3):
-            #le a c'est un compteur pour avoir autant de start et stop
-            if seq['data'][i:i+3]=='ATG' and a==0:
-                POS_D[C].append(i)
-                a=1
-            if (seq['data'][i:i+3]=='TAA' or seq['data'][i:i+3]=='TAG' or seq['data'][i:i+3]=='TGA') and a==1:
-                POS_F[C].append(i)
-                a=0
-    for C in range(3):
-        #S'il y a plus de start que de stop c'est que l'ORF finit sur le début de la séquence (ADN circulaire), on rajoute le stop de départ.
-        if len(POS_D[C]) > len(POS_F[C]):
-            POS_F[C].append(POS_F_1[C])
-    rev_seq=bio.complement_reverse(seq)
-    #meme chose pour les 3 autres frames
-    for C in range(3):
-        K=C
-        while seq['data'][K:K+3]!='TAA' and seq['data'][K:K+3]!='TAG' and seq['data'][K:K+3]!='TGA':
-            POS_F_2[C]=K
-            K += 3
-        for i in range(K,len(rev_seq['data'])-(len(seq['data'])-C)%3,3):
-            if rev_seq['data'][i:i+3]=='ATG' and a==0:
-                #positions notés en négatif
-                POS_D[C].append(-(len(rev_seq['data'])-i))
-                a=1
-            if (rev_seq['data'][i:i+3]=='TAA' or rev_seq['data'][i:i+3]=='TAG' or rev_seq['data'][i:i+3]=='TGA') and a==1:
-                POS_F[C].append(-(len(rev_seq['data'])-i))
-                a=0
-    for C in range(3):
-        if len(POS_D[C]) > len(POS_F[C]):
-            POS_F[C].append(POS_F_2[C])
+    
+    #Data doublée afin de trouver les séquences débordantes de l'ADN circulaire
+    seq['data']+=seq['data']
+    revseq=copy.deepcopy(seq)
+    revseq=bio.complement_reverse(revseq)
+
+    #Stock TOUS les stops dans 3 listes, une pour chaque frame. i correspond à la séquence reverse complement
+    PosF=[[],[],[]]
+    PosFi=[[],[],[]]
+    #Stock le premier start entre 2 stops dans 3 listes aussi.
+    PosD=[[],[],[]]
+    PosDi=[[],[],[]]
+    #Stock le stop correspondant.
+    PosF2=[[],[],[]]
+    PosF2i=[[],[],[]]
+    #Boucle pour les stops.
+    for k in range(3): #Chaque frame
+        for i in range(k,len(seq['data']),3): #Tous les 3 pas
+            if seq['data'][i:i+3]=='TAA' or seq['data'][i:i+3]=='TAG' or seq['data'][i:i+3]=='TGA':
+                PosF[k].append(i)
+        for i in range(k,len(revseq['data']),3): #boucle revseq
+            if revseq['data'][i:i+3]=='TAA' or revseq['data'][i:i+3]=='TAG' or revseq['data'][i:i+3]=='TGA':
+                PosFi[k].append(i)
+    #Boucle pour les 2 autres listes.
+    for j in range(3):
+        for k in range(0,len(PosF[j])-1): #Avance d'un stop
+            a=0 #Le compteur 'a' permet d'arreter le stockage des starts entre 2 stops apres le premier start trouvé
+            for i in range(PosF[j][k],PosF[j][k+1],3): #Entre deux stops
+                if seq['data'][i:i+3]=='ATG' and a==0:
+                    PosD[j].append(i)
+                    PosF2[j].append(PosF[j][k+1])
+                    a=1
+        for k in range(0,len(PosFi[j])-1): #revseq
+            a=0
+            for i in range(PosFi[j][k],PosFi[j][k+1],3):
+                if revseq['data'][i:i+3]=='ATG' and a==0:
+                    PosDi[j].append(i)
+                    PosF2i[j].append(PosFi[j][k+1])
+                    a=1
+
+        
+    #Nouvelles variables pour stocker uniquement les ORFs dépassant le seuil.
+    NewD,NewF=[[],[],[]],[[],[],[]]
+    NewDi,NewFi=[[],[],[]],[[],[],[]]
+    for k in range(3):
+        for i in range(len(PosD[k])):
+            if PosF2[k][i]-PosD[k][i] > threshold:
+                NewD[k].append(PosD[k][i])
+                NewF[k].append(PosF2[k][i])
+        for i in range(len(PosDi[k])):
+            if PosF2i[k][i]-PosDi[k][i] > threshold:
+                NewDi[k].append(PosDi[k][i])
+                NewFi[k].append(PosF2i[k][i])
+
+    #Données stockées dans une liste de dictionnaire
+    ORFs=[]
+    ORFsi=[]
+    for k in range(3):
+        for i in range(len(NewD[k])):
+            #remplissage du dico, start, stop, frame, longueur, proteine traduite
+            ORFs.append({'start':NewD[k][i]+1,'stop':NewF[k][i],'frame':k+1,'length':NewF[k][i]-NewD[k][i],'protein':translate(seq['data'][NewD[k][i]:NewF[k][i]],1)})
+        for i in range(len(NewDi[k])):
+            ORFsi.append({'start':len(seq['data'])-NewDi[k][i],'stop':len(seq['data'])-NewFi[k][i]+1,'frame':-k-1,'length':NewFi[k][i]-NewDi[k][i],'protein':translate(revseq['data'][NewDi[k][i]:NewFi[k][i]],1)})
+
+    #Suppression doublons. Boucles pour comparer les items entre eux
+    for i in range(len(ORFs)):
+        for j in range(len(ORFs)):
+            if ORFs[i]['protein'] == ORFs[j]['protein'] and i!=j:
+                ORFs[j]={'protein':''}
+    for i in range(len(ORFsi)):
+        for j in range(len(ORFsi)):
+            if ORFsi[i]['protein'] == ORFsi[j]['protein'] and i!=j:
+                ORFsi[j]={'protein':''}
                 
-    #application du seuil, seul les orf assez long iront dans les nouvelles listes.
-    LD,LF= POS_D[0]+POS_D[1]+POS_D[2], POS_F[0]+POS_F[1]+POS_F[2]
-    newD,newF=[],[]
-    for i in range(len(LD)):
-        if LF[i]-LD[i] > threshold:
-            newD.append(LD[i])
-            newF.append(LF[i])
-    listORFs=[]
-    for i in range(len(newD)):
-        #remplissage du dico, start, stop, frame, longueur, proteine traduite
-        listORFs.append({'start':abs(newD[i])+1,'stop':abs(newF[i]),'frame':'','length':newF[i]-newD[i],'protein':''})
-        #boucle pour completer ['frame']
-        for C in range(3):
-            if newF[i]%3==C and newF[i]>=0:
-                listORFs[i]['frame']=C+1
-            if newF[i]%3==C and newF[i]<0:
-                listORFs[i]['frame']=-C-1
-        #Completion de la proteine
-        orf=seq['data'][newD[i]:newF[i]]
-        listORFs[i]['protein']=translate(orf,codeTable)
-    return listORFs
+    for i in range(len(ORFs)-1,0,-1):
+        if ORFs[i]=={'protein':''}:
+            del ORFs[i]
+    for i in range(len(ORFsi)-1,0,-1):
+        if ORFsi[i]=={'protein':''}:
+            del ORFsi[i]
+    
+    #Correction de l'exception : si le condon start se trouve AVANT le tout premier stop et sur le début de la séquence
+    for i in range(len(ORFs)):
+        #Il est stocké mais n'est trouvé que dans le seq['data'] doublé.
+        if ORFs[i]['start']>len(seq['data'])/2:
+            #Il faut donc modifier la position start et stop
+            ORFs[i]['start']=int(ORFs[i]['start']-len(seq['data'])/2)
+            ORFs[i]['stop']=int(ORFs[i]['stop']-len(seq['data'])/2)
+
+    for i in range(len(ORFsi)):
+        if ORFsi[i]['stop']>len(revseq['data'])/2:
+            ORFsi[i]['start']=int(ORFsi[i]['start']-len(revseq['data'])/2)
+            ORFsi[i]['stop']=int(ORFsi[i]['stop']-len(revseq['data'])/2)
+
+    ORFT=ORFs+ORFsi #Fusion liste simple et liste reverse comp
+
+    return ORFT
 
 
 def getLengths(orf_list):
@@ -184,16 +219,23 @@ def getTopLongestORF(orflist,value):
     """
     
     a=getLengths(orflist)
+    a.sort()
     seuil=a[round(-(len(a)*value))]
     toplist=[]
     for i in a:
-        if i>seuil:
+        if i>=seuil:
             toplist.append(i)
     return toplist
 
-#sequence=bio.readFASTA('./seq.txt')
+sequence=bio.readFASTA('./seq.txt')
 
-#a=findORF(sequence,180,4)
-#b=getLengths(a)
-#c=getLongestORF(a)
-#d=getTopLongestORF(a,0.1)
+a=findORF(sequence,0,1)
+b=getLengths(a)
+c=getLongestORF(a)
+d=getTopLongestORF(a,0.1)
+
+for i in a:
+    print(i)
+print(b)
+print(c)
+print(d)
