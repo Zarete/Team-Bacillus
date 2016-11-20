@@ -1,0 +1,17 @@
+What is an ORF?
+In molecular genetics, an open reading frame (ORF) is the part of a reading frame that has the potential to be translated. An ORF is a continuous stretch of codons that do not contain a stop codon. 
+
+"It can either be a region that is free of STOP codons or a region that begins with a START codon and ends with a STOP codon."
+
+What is the relation between ORF and gene?
+What are the limits of such an approach?
+
+An ORF is usually a part of a gene. A gene describes the ORF but also may include DNA outside the ORF which is involved in gene regulation, such as promoter sequences. A gene isn't always DNA based too. But an ORF isn't always in a gene, it can be just a region of DNA which may or may not be transcribed and translated (due to the presence or absence of promoters and ribosome binding sites) and has unknown function.
+
+What are the principal tools computing ORFs ? In their documentation, what kind of algorithm are they using?
+
+The principal tools we found are ORF Finder on the NCBI and GetORF on EMBOSS. ORF finder and GetORF searche for open reading frames (ORFs) in the DNA sequence you enter and extract them. The programs return the range of each ORF, along with its protein translation.
+
+What are the principal parameters used in these tools?
+
+You can choose your Genetic code, the minimum and maximum nucleotide size of orf to report, the type of sequence to output, check if it is a circular sequence, find or not the orfs in the reverse sequence and let you choose the number of flanking nuclotides you want to report. You can also choose the output format.
